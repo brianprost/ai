@@ -8,6 +8,7 @@ There are currently 4 AWS Bedrock stream wrappers:
 - `AWSBedrockAnthropicMessagesStream` for Anthropic models using Messages API
 - `AWSBedrockCohereStream` for Cohere models
 - `AWSBedrockLlama2Stream` for Llama 2 models
+- `AWSBedrockMistralStream` for Mistral models
 
 This works with the official Bedrock API, and it's supported in both Node.js, [Edge Runtime](https://edge-runtime.vercel.app), and browser environments.
 
@@ -237,3 +238,53 @@ export async function POST(req: Request) {
 ```
 
 In this example, the `AWSBedrockLlama2Stream` function transforms the text generation stream from the Bedrock into a ReadableStream of parsed result. This allows clients to consume AI outputs in real-time as they're generated, instead of waiting for the complete response.
+
+## Example: Mistral Models
+
+The `AWSBedrockMistralStream` function can be coupled with a call to a Mistral model using the Bedrock API to generate a readable stream of the completion. This stream can then facilitate the real-time consumption of AI outputs as they're being generated.
+
+Here's a step-by-step example of how to implement this in Next.js:
+
+```js filename="app/api/chat/route.ts"
+import {
+  BedrockRuntimeClient,
+  InvokeModelWithResponseStreamCommand,
+} from '@aws-sdk/client-bedrock-runtime';
+import { AWSBedrockMistralStream, StreamingTextResponse } from 'ai';
+import { experimental_buildMistralPrompt } from 'ai/prompts';
+
+const bedrockClient = new BedrockRuntimeClient({
+  region: process.env.AWS_REGION ?? 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? '',
+  },
+});
+
+export async function POST(req: Request) {
+  // Extract the `prompt` from the body of the request
+  const { messages } = await req.json();
+
+  // Ask Bedrock for a streaming chat completion given the prompt
+  const bedrockResponse = await bedrockClient.send(
+    new InvokeModelWithResponseStreamCommand({
+      modelId: 'mistral.mistral-7b-instruct-v0:2',
+      contentType: 'application/json',
+      accept: 'application/json',
+      body: JSON.stringify({
+        prompt: experimental_buildMistralPrompt(messages),
+        max_tokens: 300,
+      }),
+    }),
+  );
+
+  // Convert the response into a friendly text-stream
+  const stream = AWSBedrockMistralStream(bedrockResponse);
+
+  // Respond with the stream
+  return new StreamingTextResponse(stream);
+}
+```
+
+In this example, the `AWSBedrockMistralStream` function transforms the text generation stream from the Bedrock into a ReadableStream of parsed result. This allows clients to consume AI outputs in real-time as they're generated, instead of waiting for the complete response.
+```

@@ -59,6 +59,13 @@ export function AWSBedrockLlama2Stream(
   return AWSBedrockStream(response, callbacks, chunk => chunk.generation);
 }
 
+export function AWSBedrockMistralStream(
+  response: AWSBedrockResponse,
+  callbacks?: AIStreamCallbacksAndOptions,
+): ReadableStream {
+  return AWSBedrockStream(response, callbacks, chunk => chunk.outputs[0].text);
+}
+
 export function AWSBedrockStream(
   response: AWSBedrockResponse,
   callbacks: AIStreamCallbacksAndOptions | undefined,
