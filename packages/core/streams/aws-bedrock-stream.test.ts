@@ -4,6 +4,7 @@ import {
   bedrockAnthropicV3Chunks,
   bedrockCohereChunks,
   bedrockLlama2Chunks,
+  bedrockMistralChunks,
 } from '../tests/snapshots/aws-bedrock';
 import { readAllChunks } from '../tests/utils/mock-client';
 import {
@@ -11,6 +12,7 @@ import {
   AWSBedrockAnthropicStream,
   AWSBedrockCohereStream,
   AWSBedrockLlama2Stream,
+  AWSBedrockMistralStream,
 } from './aws-bedrock-stream';
 
 function simulateBedrockResponse(chunks: any[]) {
@@ -173,6 +175,53 @@ describe('AWS Bedrock', () => {
         '0:" world"\n',
         '0:"."\n',
         '0:""\n',
+      ]);
+    });
+
+    it('should send text and data', async () => {
+      const data = new StreamData();
+
+      data.append({ t1: 'v1' });
+
+      const bedrockResponse = simulateBedrockResponse(bedrockLlama2Chunks);
+      const stream = AWSBedrockLlama2Stream(bedrockResponse, {
+        onFinal() {
+          data.close();
+        },
+      });
+
+      const response = new StreamingTextResponse(stream, {}, data);
+
+      expect(await readAllChunks(response)).toEqual([
+        '2:[{"t1":"v1"}]\n',
+        '0:""\n',
+        '0:" Hello"\n',
+        '0:","\n',
+        '0:" world"\n',
+        '0:"."\n',
+        '0:""\n',
+      ]);
+    });
+  });
+
+  describe('Mistral', () => {
+    it('should send text', async () => {
+      const data = new StreamData();
+
+      const bedrockResponse = simulateBedrockResponse(bedrockMistralChunks);
+      const stream = AWSBedrockMistralStream(bedrockResponse, {
+        onFinal() {
+          data.close();
+        },
+      });
+
+      const response = new StreamingTextResponse(stream, {}, data);
+
+      expect(await readAllChunks(response)).toEqual([
+        '0:"Hello"\n',
+        '0:","\n',
+        '0:" world"\n',
+        '0:"."\n',
       ]);
     });
 
